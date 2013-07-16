@@ -1,29 +1,20 @@
 #include <sourcemod>
-#include <sdkhooks>
 #include <sdktools>
+#include <sdkhooks>
 
 // Require TF2 module to make it fail when loading any non-TF2 (or TF2 Beta) game
 #include <tf2>
 
 #pragma semicolon 1
 
-#define VERSION "1.3.2"
+#define VERSION "1.4"
 
-#define HORSEMANN "headless_hatman"
-#define MONOCULUS "eyeball_boss"
-
-#define HEALTHBAR_CLASS "monster_resource"
-#define HEALTHBAR_PROPERTY "m_iBossHealthPercentageByte"
-#define HEALTHBAR_MAX 255
-#define FF2 "freak_fortress_2"
-
-new Handle:cvarHealthBar;
-new Handle:cvarOtherHealthBar;
-new Handle:cvarOtherEnabled;
-
-new g_trackEntity = -1;
-new g_healthBar = -1;
-new g_Monoculus = -1;
+#define RESOURCE 				"monster_resource"
+#define RESOURCE_PROP			"m_iBossHealthPercentageByte"
+#define HEALTHBAR_MAX			255.0
+#define HORSEMANN 				"headless_hatman"
+#define HEALTH_MAP				"m_iHealth"
+#define MAXHEALTH_MAP			"m_iMaxHealth"
 
 public Plugin:myinfo = 
 {
@@ -34,184 +25,87 @@ public Plugin:myinfo =
 	url = "https://forums.alliedmods.net/showthread.php?t=188543"
 }
 
+new Handle:g_Cvar_Enabled = INVALID_HANDLE;
+new g_HealthBar = -1;
+
 public OnPluginStart()
 {
-	CreateConVar("horsemann_healthbar_version", VERSION, "Horsemann Healthbar Version", FCVAR_DONTRECORD | FCVAR_NOTIFY);
-	cvarHealthBar = CreateConVar("horsemann_healthbar_enabled", "1", "Enabled Horsemann Healthbar?", FCVAR_NONE, true, 0.0, true, 1.0);
-	HookConVarChange(cvarHealthBar, EnableChanged);
+	CreateConVar("horsemann_healthbar_version", VERSION, "Horsemann Healthbar Version", FCVAR_DONTRECORD | FCVAR_NOTIFY | FCVAR_PLUGIN);
+	g_Cvar_Enabled = CreateConVar("horsemann_healthbar_enabled", "1", "Enabled Horsemann Healthbar?", FCVAR_PLUGIN, true, 0.0, true, 1.0);
+	HookConVarChange(g_Cvar_Enabled, Cvar_Enabled);
 }
 
-public OnAllPluginsLoaded()
+public Cvar_Enabled(Handle:convar, const String:oldValue[], const String:newValue[])
 {
-	cvarOtherEnabled = FindConVar("ff2_enabled");
-	cvarOtherHealthBar = FindConVar("ff2_health_bar");
-}
-
-public EnableChanged(Handle:convar, const String:oldValue[], const String:newValue[])
-{
-	// Easier than checking newvalue and oldvalue
-	if (GetConVarBool(cvarHealthBar))
+	if (!GetConVarBool(convar))
 	{
-		g_Monoculus = FindEntityByClassname(-1, MONOCULUS);
-		g_trackEntity = FindEntityByClassname(-1, HORSEMANN);
-
-		if (g_trackEntity > -1)
-		{
-			SDKHook(g_trackEntity, SDKHook_SpawnPost, UpdateBossHealth);
-			SDKHook(g_trackEntity, SDKHook_OnTakeDamagePost, OnHorsemannDamaged);
-		}
-	}
-	else
-	{
-		if (g_trackEntity > -1)
-		{
-			SDKUnhook(g_trackEntity, SDKHook_SpawnPost, UpdateBossHealth);
-			SDKUnhook(g_trackEntity, SDKHook_OnTakeDamagePost, OnHorsemannDamaged);
-		}
-		
-		if (g_Monoculus == -1)
-		{
-			UpdateBossHealth(-1);
-		}
-	}
-}
-
-
-public OnMapStart()
-{
-	FindHealthBar();
-}
-
-public OnLibraryAdded(const String:name[])
-{
-	if (StrEqual(name, FF2))
-	{
-		cvarOtherEnabled = FindConVar("ff2_enabled");
-		cvarOtherHealthBar = FindConVar("ff2_health_bar");
-	}
-}
-
-public OnLibraryRemoved(const String:name[])
-{
-	if (StrEqual(name, FF2))
-	{
-		cvarOtherEnabled = INVALID_HANDLE;
-		cvarOtherHealthBar = INVALID_HANDLE;
+		SetHealthBar(0.0);
 	}
 }
 
 public OnEntityCreated(entity, const String:classname[])
 {
-	if (!GetConVarBool(cvarHealthBar))
+	if (StrEqual(classname, RESOURCE))
 	{
-		return;
+		g_HealthBar = EntIndexToEntRef(entity);
 	}
-
-	if (StrEqual(classname, HEALTHBAR_CLASS))
+	else
+	if (StrEqual(classname, HORSEMANN))
 	{
-		g_healthBar = entity;
-	}
-	else if (g_Monoculus == -1 && StrEqual(classname, MONOCULUS))
-	{
-		g_Monoculus = entity;
-	}
-	else if (g_trackEntity == -1 && StrEqual(classname, HORSEMANN))
-	{
-		g_trackEntity = entity;
-		SDKHook(entity, SDKHook_SpawnPost, UpdateBossHealth);
-		SDKHook(entity, SDKHook_OnTakeDamagePost, OnHorsemannDamaged);
+		SDKHook(entity, SDKHook_SpawnPost, HorsemannSpawned);
+		SDKHook(entity, SDKHook_OnTakeDamagePost, HorsemannDamaged);
 	}
 }
 
 public OnEntityDestroyed(entity)
 {
-	// This assumes entity never equals -1
-	
-	if (entity == -1)
+	if (!GetConVarBool(g_Cvar_Enabled))
 	{
 		return;
 	}
 	
-	if (entity == g_Monoculus)
+	new String:classname[64];
+	GetEntityClassname(entity, classname, sizeof(classname));
+	if (StrEqual(classname, HORSEMANN))
 	{
-		g_Monoculus = FindEntityByClassname(-1, MONOCULUS);
-		if (g_Monoculus == entity)
-		{
-			g_Monoculus = FindEntityByClassname(entity, MONOCULUS);
-		}
+		SetHealthBar(0.0);
 	}
-	else if (entity == g_trackEntity)
+}
+
+public HorsemannSpawned(entity)
+{
+	if (!GetConVarBool(g_Cvar_Enabled))
 	{
-		g_trackEntity = FindEntityByClassname(-1, HORSEMANN);
-		if (g_trackEntity == entity)
-		{
-			g_trackEntity = FindEntityByClassname(entity, HORSEMANN);
-		}
-			
-		if (g_trackEntity > -1)
-		{
-			SDKHook(g_trackEntity, SDKHook_OnTakeDamagePost, OnHorsemannDamaged);
-		}
-		UpdateBossHealth(g_trackEntity);
+		return;
 	}
+	
+	SetHealthBar(100.0);
+}
+
+public HorsemannDamaged(victim, attacker, inflictor, Float:damage, damagetype, weapon, const Float:damageForce[3], const Float:damagePosition[3])
+{
+	if (!GetConVarBool(g_Cvar_Enabled) || victim < 0 || !IsValidEntity(victim))
+	{
+		return;
+	}
+	
+	new health = GetEntProp(victim, Prop_Data, HEALTH_MAP);
+	new maxHealth = GetEntProp(victim, Prop_Data, MAXHEALTH_MAP);
+	
+	new Float:newPercent = float(health) / float(maxHealth);
+	SetHealthBar(newPercent);
 	
 }
 
-public OnHorsemannDamaged(victim, attacker, inflictor, Float:damage, damagetype)
+SetHealthBar(Float:percent)
 {
-	UpdateBossHealth(victim);
-}
-
-public UpdateBossHealth(entity)
-{
-	if (g_healthBar == -1)
+	new healthBar = EntRefToEntIndex(g_HealthBar);
+	if (healthBar == -1 || !IsValidEntity(healthBar))
 	{
 		return;
 	}
-	
-	if (!GetConVarBool(cvarHealthBar) || g_Monoculus != -1)
-	{
-		return;
-	}
+	// In practice, the multiplier is 2.55
+	new Float:value = percent * (HEALTHBAR_MAX / 100.0);
 
-	if (cvarOtherEnabled != INVALID_HANDLE && cvarOtherHealthBar != INVALID_HANDLE && GetConVarBool(cvarOtherEnabled) && GetConVarBool(cvarOtherHealthBar))
-	{
-		return;
-	}
-	
-	new percentage;
-	if (IsValidEntity(entity))
-	{
-		new iMaxHealth = GetEntProp(entity, Prop_Data, "m_iMaxHealth");
-		new iHealth = GetEntProp(entity, Prop_Data, "m_iHealth");
-		
-		if (iMaxHealth <= 0)
-		{
-			percentage = 0;
-		}
-		else
-		{
-			percentage = RoundToCeil(float(iHealth) / iMaxHealth * HEALTHBAR_MAX);
-		}
-	}
-	else
-	{
-		percentage = 0;
-	}
-	
-	SetEntProp(g_healthBar, Prop_Send, HEALTHBAR_PROPERTY, percentage);
-}
-
-FindHealthBar()
-{
-	g_healthBar = FindEntityByClassname(-1, HEALTHBAR_CLASS);
-	
-	if (g_healthBar == -1)
-	{
-		g_healthBar = CreateEntityByName(HEALTHBAR_CLASS);
-		if (g_healthBar != -1)
-		{
-			DispatchSpawn(g_healthBar);
-		}
-	}
+	SetEntProp(healthBar, Prop_Send, RESOURCE_PROP, RoundToNearest(value));
 }

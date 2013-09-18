@@ -2,8 +2,8 @@
 // Copyright 2011-2012 Ross Bemrose (Powerlord)
 // Like All SourceMod Plugins, this code is licensed under the GPLv2
 
-#define VERSION "1.8.1"
-#define MAPLENGTH 65
+#define VERSION "1.9.0"
+
 #define UPDATE_URL "http://www.rbemrose.com/sourcemod/tfforceholidays/updatefile.txt"
 
 #include <sourcemod>
@@ -27,6 +27,9 @@ new Handle:g_Cvar_Overrides     = INVALID_HANDLE;
 new Handle:g_Maplist = INVALID_HANDLE;
 new g_Maplist_Serial = -1;
 
+// Valve CVars
+new Handle:g_Cvar_ForceHoliday 	= INVALID_HANDLE;
+
 public Plugin:myinfo = 
 {
 	name = "TF Force Holidays",
@@ -40,17 +43,19 @@ public OnPluginStart()
 {
 	CreateConVar("tfh_version", VERSION, "TF Force Holidays version", FCVAR_NOTIFY | FCVAR_DONTRECORD | FCVAR_SPONLY);
 	
-	g_Cvar_Enabled     = CreateConVar("tfh_enabled", "1", "Enable TF Force Holidays", FCVAR_NOTIFY, true, -1.0, true, 1.0);
+	g_Cvar_Enabled     = CreateConVar("tfh_enabled", "1", "Enable TF Force Holidays", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	g_Cvar_Overrides   = CreateConVar("tfh_use_overrides", "1", "Use Overrides file for Halloween maps", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
-	g_Cvar_Halloween   = CreateConVar("tfh_halloween", "0", "Force Halloween mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 2.0);
+	g_Cvar_Halloween   = CreateConVar("tfh_halloween", "0", "Force Halloween mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_FullMoon    = CreateConVar("tfh_fullmoon", "0", "Force Full Moon mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Birthday    = CreateConVar("tfh_birthday", "0", "Force Birthday mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Winter      = CreateConVar("tfh_winter", "0", "Force Winter mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_MeetThePyro = CreateConVar("tfh_meetthepyro", "0", "Force Meet The Pyro mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Valentines  = CreateConVar("tfh_valentines", "0", "Force Valentines mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	
-	g_Maplist = CreateArray(ByteCountToCells(MAPLENGTH));
+	g_Cvar_ForceHoliday = FindConVar("tf_forced_holiday");
+	
+	g_Maplist = CreateArray(ByteCountToCells(PLATFORM_MAX_PATH));
 
 	// Bind the map list file to the "halloween" map list
 	decl String:mapListPath[PLATFORM_MAX_PATH];
@@ -87,10 +92,39 @@ LoadMapList()
 
 public OnMapStart()
 {
-	decl String:mapname[MAPLENGTH];
+	decl String:mapname[PLATFORM_MAX_PATH];
 	GetCurrentMap(mapname, sizeof(mapname));
 	
 	PrecacheBoss(mapname);
+}
+
+public OnConfigsExecuted()
+{
+	FixForceHolidays();
+}
+
+public Cvar_HalloFullMoonChanged(Handle:convar, const String:oldValue[], const String:newValue[])
+{
+	FixForceHolidays();
+}
+
+FixForceHolidays()
+{
+	decl String:mapname[PLATFORM_MAX_PATH];
+	GetCurrentMap(mapname, sizeof(mapname));
+	
+	if (IsHalloweenMap(mapname) || GetConVarBool(g_Cvar_Halloween))
+	{
+		SetConVarInt(g_Cvar_ForceHoliday, _:TFHoliday_Halloween);
+	}
+	else if (GetConVarBool(g_Cvar_FullMoon))
+	{
+		SetConVarInt(g_Cvar_ForceHoliday, _:TFHoliday_FullMoon);
+	}
+	else
+	{
+		SetConVarInt(g_Cvar_ForceHoliday, 0); // _:TFHoliday_None
+	}
 }
 
 public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
@@ -116,7 +150,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 			
 			case TFHoliday_Halloween:
 			{
-				decl String:mapname[MAPLENGTH];
+				decl String:mapname[PLATFORM_MAX_PATH];
 				GetCurrentMap(mapname, sizeof(mapname));
 				if (IsHalloweenMap(mapname))
 				{
@@ -125,7 +159,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 				}
 				
 				new halloween = GetConVarInt(g_Cvar_Halloween);
-				if (halloween == -1 || halloween == 2)
+				if (halloween == -1)
 				{
 					result = false;
 					return Plugin_Changed;
@@ -184,7 +218,6 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 			
 			case TFHoliday_FullMoon:
 			{
-				new halloween = GetConVarInt(g_Cvar_Halloween);
 				new fullmoon = GetConVarInt(g_Cvar_FullMoon);
 				
 				if (fullmoon == -1)
@@ -192,7 +225,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					result = false;
 					return Plugin_Changed;
 				}
-				else if (fullmoon == 1 || halloween == 2)
+				else if (fullmoon == 1)
 				{
 					result = true;
 					return Plugin_Changed;
@@ -201,7 +234,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 			
 			case TFHoliday_HalloweenOrFullMoon:
 			{
-				decl String:mapname[MAPLENGTH];
+				decl String:mapname[PLATFORM_MAX_PATH];
 				GetCurrentMap(mapname, sizeof(mapname));
 				if (IsHalloweenMap(mapname))
 				{
@@ -217,7 +250,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					result = false;
 					return Plugin_Changed;
 				}
-				else if (halloween >= 1 || fullmoon == 1)
+				else if (halloween == 1 || fullmoon == 1)
 				{
 					result = true;
 					return Plugin_Changed;
@@ -226,7 +259,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 
 			case TFHoliday_HalloweenOrFullMoonOrValentines:
 			{
-				decl String:mapname[MAPLENGTH];
+				decl String:mapname[PLATFORM_MAX_PATH];
 				GetCurrentMap(mapname, sizeof(mapname));
 				if (IsHalloweenMap(mapname))
 				{
@@ -243,7 +276,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					result = false;
 					return Plugin_Changed;
 				}
-				else if (halloween >= 1 || fullmoon == 1 || valentines == 1)
+				else if (halloween == 1 || fullmoon == 1 || valentines == 1)
 				{
 					result = true;
 					return Plugin_Changed;

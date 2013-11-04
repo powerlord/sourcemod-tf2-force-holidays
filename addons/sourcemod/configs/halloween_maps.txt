@@ -3,3 +3,4 @@ cp_manor_event
 koth_viaduct_event
 koth_lakeside_event
 mvm_ghost_town
+plr_hightower_event

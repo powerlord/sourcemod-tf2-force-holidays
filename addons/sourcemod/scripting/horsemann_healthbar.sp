@@ -92,7 +92,7 @@ public HorsemannDamaged(victim, attacker, inflictor, Float:damage, damagetype, w
 	new health = GetEntProp(victim, Prop_Data, HEALTH_MAP);
 	new maxHealth = GetEntProp(victim, Prop_Data, MAXHEALTH_MAP);
 	
-	new Float:newPercent = float(health) / float(maxHealth);
+	new Float:newPercent = float(health) / float(maxHealth) * 100.0;
 	SetHealthBar(newPercent);
 	
 }

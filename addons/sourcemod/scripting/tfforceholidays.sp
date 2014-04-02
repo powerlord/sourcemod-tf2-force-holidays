@@ -1,16 +1,46 @@
-// TF2 Force Holidays
-// Copyright 2011-2012 Ross Bemrose (Powerlord)
-// Like All SourceMod Plugins, this code is licensed under the GPLv2
+/**
+ * vim: set ts=4 :
+ * =============================================================================
+ * TF2 Force Holidays
+ * Force multiple holidays on at the same time
+ * 
+ * TF2 Force Holidays (C) 2011-2014 Ross Bemrose (Powerlord). All rights reserved.
+ * SourceMod (C)2004-2008 AlliedModders LLC.  All rights reserved.
+ * =============================================================================
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, version 3.0, as published by the
+ * Free Software Foundation.
+ * 
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * As a special exception, AlliedModders LLC gives you permission to link the
+ * code of this program (as well as its derivative works) to "Half-Life 2," the
+ * "Source Engine," the "SourcePawn JIT," and any Game MODs that run on software
+ * by the Valve Corporation.  You must obey the GNU General Public License in
+ * all respects for all other code used.  Additionally, AlliedModders LLC grants
+ * this exception to all derivative works.  AlliedModders LLC defines further
+ * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
+ * or <http://www.sourcemod.net/license.php>.
+ *
+ * Version: 1.9.0
+ */
 
 #define VERSION "1.9.0"
-
-#define UPDATE_URL "http://www.rbemrose.com/sourcemod/tfforceholidays/updatefile.txt"
 
 #include <sourcemod>
 #include <tf2>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
+// Seriously considering removing updater integration, moving things around to make it easier later
+#define UPDATE_URL "http://www.rbemrose.com/sourcemod/tfforceholidays/updatefile.txt"
 
 #pragma semicolon 1
 
@@ -21,7 +51,7 @@ new Handle:g_Cvar_Birthday		= INVALID_HANDLE;
 new Handle:g_Cvar_Winter		= INVALID_HANDLE;
 new Handle:g_Cvar_MeetThePyro	= INVALID_HANDLE;
 new Handle:g_Cvar_Valentines	= INVALID_HANDLE;
-
+new Handle:g_Cvar_AprilFools	= INVALID_HANDLE;
 new Handle:g_Cvar_Overrides     = INVALID_HANDLE;
 
 new Handle:g_Maplist = INVALID_HANDLE;
@@ -52,6 +82,7 @@ public OnPluginStart()
 	g_Cvar_Winter      = CreateConVar("tfh_winter", "0", "Force Winter mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_MeetThePyro = CreateConVar("tfh_meetthepyro", "0", "Force Meet The Pyro mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Valentines  = CreateConVar("tfh_valentines", "0", "Force Valentines mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
+	g_Cvar_AprilFools  = CreateConVar("tfh_aprilfools", "0", "Force April Fools mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	
 	g_Cvar_ForceHoliday = FindConVar("tf_forced_holiday");
 	
@@ -95,7 +126,7 @@ public OnMapStart()
 	decl String:mapname[PLATFORM_MAX_PATH];
 	GetCurrentMap(mapname, sizeof(mapname));
 	
-	PrecacheBoss(mapname);
+	//PrecacheBoss(mapname);
 }
 
 public OnConfigsExecuted()
@@ -282,6 +313,21 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					return Plugin_Changed;
 				}
 			}
+			
+			case TFHoliday_AprilFools:
+			{
+				new aprilfools = GetConVarInt(g_Cvar_AprilFools);
+				if (aprilfools == -1)
+				{
+					result = false;
+					return Plugin_Changed;
+				}
+				else if (aprilfools == 1)
+				{
+					result = true;
+					return Plugin_Changed;
+				}
+			}
 		}
 	}
 	return Plugin_Continue;
@@ -298,9 +344,10 @@ bool:IsHalloweenMap(const String:mapname[])
 	return (mapIndex > -1);
 }
 
-PrecacheBoss(const String:mapname[])
+// 2014-04-02: Check this again... this hasn't been tested since Valve busted boss precaching in 2012 and it needs to be tested again.
+stock PrecacheBoss(const String:mapname[])
 {
-		// Precache sounds and models
+	// Precache sounds and models
 	if (StrEqual("cp_manor_event", mapname, false))
 	{
 		// Horsemann stuff  taken from Geit's Horseless Headless Horsemann plugin
@@ -373,6 +420,7 @@ PrecacheBoss(const String:mapname[])
 		PrecacheSound("ui/halloween_boss_escape.wav", true);
 		PrecacheSound("ui/halloween_boss_escape_sixty.wav", true);
 		PrecacheSound("ui/halloween_boss_escape_ten.wav", true);
+		
 		PrecacheModel("models/props_halloween/ghost_no_hat.mdl", true);
 		PrecacheSound("vo/halloween_moan1.wav", true);
 		PrecacheSound("vo/halloween_moan2.wav", true);
@@ -776,5 +824,328 @@ PrecacheBoss(const String:mapname[])
 		PrecacheSound("vo/halloween_moan2.wav", true);
 		PrecacheSound("vo/halloween_moan3.wav", true);
 		PrecacheSound("vo/halloween_moan4.wav", true);
+	}
+	// Helltower appears to work properly already
+	else if (StrEqual("plr_hightower_event", mapname, false))
+	{
+		// Skeletons
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper.mdl", true);
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_animations.mdl", true);
+		PrecacheModel("models/bots/skeleton_sniper_boss/skeleton_sniper_boss.mdl", true);
+		PrecacheModel("models/bots/skeleton_sniper_boss/skeleton_sniper_boss_animations.mdl", true);
+		
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_arm_l.mdl", true);
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_arm_r.mdl", true);		
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_leg_l.mdl", true);		
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_leg_r.mdl", true);		
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_head.mdl", true);		
+		PrecacheModel("models/bots/skeleton_sniper/skeleton_sniper_gib_torso.mdl", true);
+		
+		PrecacheSound("misc/halloween/skeleton_break.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_giant_01.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_giant_02.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_giant_03.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_01.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_02.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_03.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_04.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_05.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_06.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_medium_07.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_01.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_02.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_03.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_04.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_05.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_06.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_07.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_08.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_09.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_10.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_11.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_12.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_13.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_14.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_15.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_16.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_17.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_18.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_19.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_20.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_21.wav", true);
+		PrecacheSound("misc/halloween/skeletons/skelly_small_22.wav", true);
+		
+		// Mann Bros Arguing
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_lost06_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_almost_won12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_bridge09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies13.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies14.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_enemies15.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_intro_long01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_intro_long02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_intro_short01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_intro_short02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_intro_short03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose01_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_lose08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing13.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing14.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing15.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing16.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing17.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_losing_push12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_midnight_again09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_misc06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_spells07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win02_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_win11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_blutarch_winning09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue13.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue14.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue15.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue16.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue17.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue18.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue19.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue20.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue21.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue22.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue23.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue24.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue25.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue26.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue27.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_mannbros_argue28.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_almost_lost01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_almost_won01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_bridge08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_enemies08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_long01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_long02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_short01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_short02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_short03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_intro_short04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_lose08_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing13.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing14.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing15.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing16.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing17.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing18.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing19.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing19_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing20.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing21.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_losing_push08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_midnight_again06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_spells_long01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win02_music.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_win09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning01.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning02.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning03.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning04.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning05.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning06.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning07.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning08.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning09.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning10.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning11.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning12.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning13.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning14.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning15.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning16.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning17.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning18.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning19.wav", true);
+		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning20.wav", true);
 	}
 }

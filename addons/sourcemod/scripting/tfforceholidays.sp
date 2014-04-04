@@ -32,10 +32,11 @@
  * Version: 1.9.0
  */
 
-#define VERSION "1.9.0"
+#define VERSION "2.0.0"
 
 #include <sourcemod>
 #include <tf2>
+#include <sdktools>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
@@ -60,6 +61,9 @@ new g_Maplist_Serial = -1;
 // Valve CVars
 new Handle:g_Cvar_ForceHoliday 	= INVALID_HANDLE;
 
+new Handle:g_GameConf;
+new Handle:g_IsHolidayActive;
+
 public Plugin:myinfo = 
 {
 	name = "TF Force Holidays",
@@ -67,6 +71,13 @@ public Plugin:myinfo =
 	description = "Enable multiple holidays at once",
 	version = VERSION,
 	url = "https://forums.alliedmods.net/showthread.php?t=171012"
+}
+
+public APLRes:AskPluginLoad2(Handle:myself, bool:late, String:error[], err_max)
+{
+	CreateNative("TF2_IsHolidayActive", Native_IsHolidayActive);
+	RegPluginLibrary("tfforceholidays");
+	return APLRes_Success;
 }
 
 public OnPluginStart()
@@ -94,6 +105,14 @@ public OnPluginStart()
 	SetMapListCompatBind("halloween", mapListPath);
 
 	LoadMapList();
+	
+	g_GameConf = LoadGameConfigFile("tf2-holidays");
+	
+	StartPrepSDKCall(SDKCall_Static);
+	PrepSDKCall_SetFromConf(g_GameConf, SDKConf_Signature, "IsHolidayActive");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_ByValue);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_ByValue);
+	g_IsHolidayActive = EndPrepSDKCall();
 	
 	if (LibraryExists("updater"))
 	{
@@ -344,7 +363,7 @@ bool:IsHalloweenMap(const String:mapname[])
 	return (mapIndex > -1);
 }
 
-// 2014-04-02: Check this again... this hasn't been tested since Valve busted boss precaching in 2012 and it needs to be tested again.
+// This function is not currently necessary... game does all correct precaching when map is loaded
 stock PrecacheBoss(const String:mapname[])
 {
 	// Precache sounds and models
@@ -1148,4 +1167,14 @@ stock PrecacheBoss(const String:mapname[])
 		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning19.wav", true);
 		PrecacheSound("vo/halloween_mann_brothers/sf13_redmond_winning20.wav", true);
 	}
+}
+
+// Natives
+
+//native bool:TF2_IsHolidayActive(TFHoliday:holiday);
+public Native_IsHolidayActive(Handle:plugin, numParams)
+{
+	new TFHoliday:holiday = GetNativeCell(1);
+	
+	return bool:SDKCall(g_IsHolidayActive, _:holiday); 
 }

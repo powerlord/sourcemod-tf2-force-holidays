@@ -53,7 +53,7 @@ public OnPluginStart()
 {
 	CreateConVar("isholidayactive_version", VERSION, "Is Holiday Active version", FCVAR_PLUGIN|FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_SPONLY);
 	g_Cvar_Enabled = CreateConVar("isholidayactive_enable", "1", "Enable Is Holiday Active?", FCVAR_PLUGIN|FCVAR_NOTIFY|FCVAR_DONTRECORD, true, 0.0, true, 1.0);
-	
+	RegAdminCmd("checkholiday", Cmd_CheckHoliday, ADMFLAG_GENERIC, "Check if a holiday is currently running");
 }
 
 public Action:Cmd_CheckHoliday(client, args)
@@ -75,7 +75,7 @@ public Action:Cmd_CheckHoliday(client, args)
 	GetCmdArg(1, arg1, sizeof(arg1));
 	
 	new holiday = StringToInt(arg1);
-	if (holiday <= 0 || holiday >= 9)
+	if (holiday <= 0 || holiday >= 10)
 	{
 		ReplyToCommand(client, "Argument %d out of range (1-9)", holiday);
 		return Plugin_Handled;
@@ -102,7 +102,7 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 	decl String:holidayName[64];
 	HolidayToString(holiday, holidayName, sizeof(holidayName));
 	
-	PrintToChatAll("Holiday check for \"%s\" intercepted", holidayName);
+	LogToGame("Holiday check for \"%s\" intercepted", holidayName);
 	return Plugin_Continue;
 }
 

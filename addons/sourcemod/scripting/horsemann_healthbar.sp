@@ -28,11 +28,15 @@ public Plugin:myinfo =
 new Handle:g_Cvar_Enabled = INVALID_HANDLE;
 new g_HealthBar = -1;
 
+new Handle:g_hHorsemen;
+
 public OnPluginStart()
 {
 	CreateConVar("horsemann_healthbar_version", VERSION, "Horsemann Healthbar Version", FCVAR_DONTRECORD | FCVAR_NOTIFY | FCVAR_PLUGIN);
 	g_Cvar_Enabled = CreateConVar("horsemann_healthbar_enabled", "1", "Enabled Horsemann Healthbar?", FCVAR_PLUGIN, true, 0.0, true, 1.0);
 	HookConVarChange(g_Cvar_Enabled, Cvar_Enabled);
+	
+	g_hHorsemen = CreateArray();
 }
 
 public Cvar_Enabled(Handle:convar, const String:oldValue[], const String:newValue[])
@@ -52,6 +56,7 @@ public OnEntityCreated(entity, const String:classname[])
 	else
 	if (StrEqual(classname, HORSEMANN))
 	{
+		PushArrayCell(g_hHorsemen, entity);
 		SDKHook(entity, SDKHook_SpawnPost, HorsemannSpawned);
 		SDKHook(entity, SDKHook_OnTakeDamagePost, HorsemannDamaged);
 	}
@@ -59,16 +64,14 @@ public OnEntityCreated(entity, const String:classname[])
 
 public OnEntityDestroyed(entity)
 {
-	if (!GetConVarBool(g_Cvar_Enabled))
+	new pos = FindValueInArray(g_hHorsemen, entity);
+	if (pos > -1)
 	{
-		return;
-	}
-	
-	new String:classname[64];
-	GetEntityClassname(entity, classname, sizeof(classname));
-	if (StrEqual(classname, HORSEMANN))
-	{
-		SetHealthBar(0.0);
+		RemoveFromArray(g_hHorsemen, pos);
+		if (GetConVarBool(g_Cvar_Enabled))
+		{
+			SetHealthBar(0.0);
+		}
 	}
 }
 

@@ -29,13 +29,14 @@
  * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
  * or <http://www.sourcemod.net/license.php>.
  *
- * Version: 1.9.1
+ * Version: 1.10.0
  */
 
-#define VERSION "1.9.1"
+#define VERSION "1.10.0 alpha 1"
 
 #include <sourcemod>
 #include <tf2>
+#include <sdkhooks>
 
 #undef REQUIRE_PLUGIN
 #include <updater>
@@ -53,12 +54,16 @@ new Handle:g_Cvar_MeetThePyro	= INVALID_HANDLE;
 new Handle:g_Cvar_Valentines	= INVALID_HANDLE;
 new Handle:g_Cvar_AprilFools	= INVALID_HANDLE;
 new Handle:g_Cvar_DontForce = INVALID_HANDLE;
+new Handle:g_Cvar_Updater = INVALID_HANDLE;
+new Handle:g_Cvar_NormalHealth = INVALID_HANDLE;
 
 // Valve CVars
 new Handle:g_Cvar_ForceHoliday 	= INVALID_HANDLE;
 
 new g_OldForceValue = 0;
-new g_bWeChangedForceValue = false;
+
+new bool:g_bWeChangedForceValue = false;
+new bool:g_Updater = false;
 
 public Plugin:myinfo = 
 {
@@ -83,31 +88,73 @@ public OnPluginStart()
 	g_Cvar_Valentines  = CreateConVar("tfh_valentines", "0", "Force Valentines mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_AprilFools  = CreateConVar("tfh_aprilfools", "0", "Force April Fools mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 
+	g_Cvar_ForceHoliday = FindConVar("tf_forced_holiday");
+
 	g_Cvar_DontForce  = CreateConVar("tfh_dontforce", "0", "If set to 1, will not force tf_forced_holiday to change. NOTE: SETTING THIS TO 1 BREAKS ZOMBIE COSTUMES", FCVAR_NONE, true, 0.0, true, 1.0);
 	
-	g_Cvar_ForceHoliday = FindConVar("tf_forced_holiday");
-	
-	if (LibraryExists("updater"))
-	{
-		Updater_AddPlugin(UPDATE_URL);
-	}
+	g_Cvar_Updater  = CreateConVar("tfh_updater", "1", "If set to 1, will use Updater (if available) to update", FCVAR_NONE, true, 0.0, true, 1.0);
+	g_Cvar_NormalHealth  = CreateConVar("tfh_normalhealth", "0", "Force Normal Health Kits when Halloween or Full Moon mode is on. Takes effect on round change.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	HookConVarChange(g_Cvar_Halloween, Cvar_HalloFullMoonChanged);
 	HookConVarChange(g_Cvar_FullMoon, Cvar_HalloFullMoonChanged);
 	HookConVarChange(g_Cvar_DontForce, Cvar_HalloFullMoonChanged);
+	HookConVarChange(g_Cvar_Updater, Cvar_Updater);
 }
 
 public OnLibraryAdded(const String:name[])
 {
-	if (StrEqual(name, "updater"))
+	if (StrEqual(name, "updater") && !g_Updater && GetConVarBool(g_Cvar_Updater))
 	{
-		Updater_AddPlugin(UPDATE_URL);
+		AddUpdater();
+	}
+}
+
+public OnLibraryRemoved(const String:name[])
+{
+	if (StrEqual(name, "updater") && g_Updater)
+	{
+		g_Updater = false;
 	}
 }
 
 public OnConfigsExecuted()
 {
 	FixForceHolidays();
+	
+	if (LibraryExists("updater") && GetConVarBool(g_Cvar_Updater))
+	{
+		AddUpdater();
+	}
+}
+
+public Cvar_Updater(Handle:convar, const String:oldValue[], const String:newValue[])
+{
+	if (GetConVarBool(convar))
+	{
+		AddUpdater();
+	}
+	else
+	{
+		RemoveUpdater();
+	}
+}
+
+AddUpdater()
+{
+	if (!g_Updater)
+	{
+		Updater_AddPlugin(UPDATE_URL);
+		g_Updater = true;
+	}
+}
+
+RemoveUpdater()
+{
+	if (g_Updater)
+	{
+		Updater_RemovePlugin();
+		g_Updater = false;
+	}
 }
 
 public Cvar_HalloFullMoonChanged(Handle:convar, const String:oldValue[], const String:newValue[])
@@ -298,5 +345,26 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 			}
 		}
 	}
+	return Plugin_Continue;
+}
+
+public OnEntityCreated(entity, const String:classname[])
+{
+	if (GetConVarBool(g_Cvar_NormalHealth))
+	{
+		new hall = GetConVarBool(g_Cvar_ForceHoliday);
+		if (hall == _:TFHoliday_Halloween || hall == _:TFHoliday_FullMoon)
+		{
+			if (strncmp("item_healthkit_", classname, 15) == 0)
+			{
+				SDKHook(entity, SDKHook_Spawn, OnHealthkitSpawn);
+			}
+		}
+	}
+}
+
+public Action:OnHealthkitSpawn(entity)
+{
+	SetEntProp(entity, Prop_Send, "m_nModelIndexOverrides", 0);
 	return Plugin_Continue;
 }

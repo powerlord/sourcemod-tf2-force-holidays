@@ -93,7 +93,7 @@ public OnPluginStart()
 	g_Cvar_DontForce  = CreateConVar("tfh_dontforce", "0", "If set to 1, will not force tf_forced_holiday to change. NOTE: SETTING THIS TO 1 BREAKS ZOMBIE COSTUMES", FCVAR_NONE, true, 0.0, true, 1.0);
 	
 	g_Cvar_Updater  = CreateConVar("tfh_updater", "1", "If set to 1, will use Updater (if available) to update", FCVAR_NONE, true, 0.0, true, 1.0);
-	g_Cvar_NormalHealth  = CreateConVar("tfh_normalhealth", "0", "Force Normal Health Kits when Halloween or Full Moon mode is on. Takes effect on round change.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
+	g_Cvar_NormalHealth  = CreateConVar("tfh_normalhealth", "0", "Force Normal Health Kits when Halloween or Full Moon mode are on. Takes effect on round change.", FCVAR_NOTIFY, true, 0.0, true, 1.0);
 	
 	HookConVarChange(g_Cvar_Halloween, Cvar_HalloFullMoonChanged);
 	HookConVarChange(g_Cvar_FullMoon, Cvar_HalloFullMoonChanged);

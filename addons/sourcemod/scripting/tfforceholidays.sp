@@ -32,7 +32,7 @@
  * Version: 1.10.0
  */
 
-#define VERSION "1.10.0 alpha 1"
+#define VERSION "1.10.0 alpha 2"
 
 #include <sourcemod>
 #include <tf2>
@@ -50,7 +50,6 @@ new Handle:g_Cvar_Halloween		= INVALID_HANDLE;
 new Handle:g_Cvar_FullMoon		= INVALID_HANDLE;
 new Handle:g_Cvar_Birthday		= INVALID_HANDLE;
 new Handle:g_Cvar_Winter		= INVALID_HANDLE;
-new Handle:g_Cvar_MeetThePyro	= INVALID_HANDLE;
 new Handle:g_Cvar_Valentines	= INVALID_HANDLE;
 new Handle:g_Cvar_AprilFools	= INVALID_HANDLE;
 new Handle:g_Cvar_DontForce = INVALID_HANDLE;
@@ -84,7 +83,6 @@ public OnPluginStart()
 	g_Cvar_FullMoon    = CreateConVar("tfh_fullmoon", "0", "Force Full Moon mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Birthday    = CreateConVar("tfh_birthday", "0", "Force Birthday mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Winter      = CreateConVar("tfh_winter", "0", "Force Winter mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
-	g_Cvar_MeetThePyro = CreateConVar("tfh_meetthepyro", "0", "Force Meet The Pyro mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Valentines  = CreateConVar("tfh_valentines", "0", "Force Valentines mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_AprilFools  = CreateConVar("tfh_aprilfools", "0", "Force April Fools mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 
@@ -257,21 +255,6 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					return Plugin_Changed;
 				}
 				else if (valentines == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
-			}
-			
-			case TFHoliday_MeetThePyro:
-			{
-				new mtp = GetConVarInt(g_Cvar_MeetThePyro);
-				if (mtp == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (mtp == 1)
 				{
 					result = true;
 					return Plugin_Changed;

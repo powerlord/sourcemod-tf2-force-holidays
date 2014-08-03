@@ -7,7 +7,7 @@
 
 #pragma semicolon 1
 
-#define VERSION "1.4"
+#define VERSION "1.4.1"
 
 #define RESOURCE 				"monster_resource"
 #define RESOURCE_PROP			"m_iBossHealthPercentageByte"

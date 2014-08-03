@@ -56,7 +56,6 @@ public OnEntityCreated(entity, const String:classname[])
 	else
 	if (StrEqual(classname, HORSEMANN))
 	{
-		PushArrayCell(g_hHorsemen, entity);
 		SDKHook(entity, SDKHook_SpawnPost, HorsemannSpawned);
 		SDKHook(entity, SDKHook_OnTakeDamagePost, HorsemannDamaged);
 	}
@@ -64,13 +63,20 @@ public OnEntityCreated(entity, const String:classname[])
 
 public OnEntityDestroyed(entity)
 {
-	new pos = FindValueInArray(g_hHorsemen, entity);
-	if (pos > -1)
+	if (entity == EntRefToEntIndex(g_HealthBar))
 	{
-		RemoveFromArray(g_hHorsemen, pos);
-		if (GetConVarBool(g_Cvar_Enabled))
+		g_HealthBar = INVALID_ENT_REFERENCE;
+	}
+	else
+	{
+		new pos = FindValueInArray(g_hHorsemen, entity);
+		if (pos > -1)
 		{
-			SetHealthBar(0.0);
+			RemoveFromArray(g_hHorsemen, pos);
+			if (GetConVarBool(g_Cvar_Enabled))
+			{
+				SetHealthBar(0.0);
+			}
 		}
 	}
 }
@@ -81,6 +87,8 @@ public HorsemannSpawned(entity)
 	{
 		return;
 	}
+	
+	PushArrayCell(g_hHorsemen, entity);
 	
 	SetHealthBar(100.0);
 }
@@ -97,13 +105,12 @@ public HorsemannDamaged(victim, attacker, inflictor, Float:damage, damagetype, w
 	
 	new Float:newPercent = float(health) / float(maxHealth) * 100.0;
 	SetHealthBar(newPercent);
-	
 }
 
 SetHealthBar(Float:percent)
 {
 	new healthBar = EntRefToEntIndex(g_HealthBar);
-	if (healthBar == -1 || !IsValidEntity(healthBar))
+	if (healthBar == INVALID_ENT_REFERENCE || !IsValidEntity(healthBar))
 	{
 		return;
 	}

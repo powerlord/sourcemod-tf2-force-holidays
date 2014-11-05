@@ -32,7 +32,7 @@
  * Version: 1.10.0
  */
 
-#define VERSION "1.10.0 alpha 2"
+#define VERSION "1.10.0"
 
 #include <sourcemod>
 #include <tf2>
@@ -41,7 +41,7 @@
 #undef REQUIRE_PLUGIN
 #include <updater>
 // Seriously considering removing updater integration, moving things around to make it easier later
-#define UPDATE_URL "http://www.rbemrose.com/sourcemod/tfforceholidays/updatefile.txt"
+#define UPDATE_URL "http://tf2.rbemrose.com/sourcemod/tfforceholidays/updatefile.txt"
 
 #pragma semicolon 1
 
@@ -340,14 +340,13 @@ public OnEntityCreated(entity, const String:classname[])
 		{
 			if (strncmp("item_healthkit_", classname, 15) == 0)
 			{
-				SDKHook(entity, SDKHook_Spawn, OnHealthkitSpawn);
+				SDKHook(entity, SDKHook_SpawnPost, OnHealthkitSpawn);
 			}
 		}
 	}
 }
 
-public Action:OnHealthkitSpawn(entity)
+public OnHealthkitSpawn(entity)
 {
-	SetEntProp(entity, Prop_Send, "m_nModelIndexOverrides", 0);
-	return Plugin_Continue;
+	SetEntProp(entity, Prop_Send, "m_nModelIndexOverrides", 0, _, 2);
 }

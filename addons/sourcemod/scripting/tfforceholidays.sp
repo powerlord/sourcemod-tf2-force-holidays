@@ -29,10 +29,10 @@
  * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
  * or <http://www.sourcemod.net/license.php>.
  *
- * Version: 1.10.0
+ * Version: 1.10.1
  */
 
-#define VERSION "1.10.0"
+#define VERSION "1.10.1"
 
 #include <sourcemod>
 #include <tf2>
@@ -55,6 +55,7 @@ new Handle:g_Cvar_AprilFools	= INVALID_HANDLE;
 new Handle:g_Cvar_DontForce = INVALID_HANDLE;
 new Handle:g_Cvar_Updater = INVALID_HANDLE;
 new Handle:g_Cvar_NormalHealth = INVALID_HANDLE;
+new Handle:g_Cvar_EndOfTheLine = INVALID_HANDLE;
 
 // Valve CVars
 new Handle:g_Cvar_ForceHoliday 	= INVALID_HANDLE;
@@ -85,7 +86,8 @@ public OnPluginStart()
 	g_Cvar_Winter      = CreateConVar("tfh_winter", "0", "Force Winter mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_Valentines  = CreateConVar("tfh_valentines", "0", "Force Valentines mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
 	g_Cvar_AprilFools  = CreateConVar("tfh_aprilfools", "0", "Force April Fools mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
-
+	g_Cvar_EndOfTheLine = CreateConVar("tfh_endoftheline", "0", "Force End of the Line mode: -1: Always off, 0: Use game setting, 1: Always on", FCVAR_NOTIFY, true, -1.0, true, 1.0);
+	
 	g_Cvar_ForceHoliday = FindConVar("tf_forced_holiday");
 
 	g_Cvar_DontForce  = CreateConVar("tfh_dontforce", "0", "If set to 1, will not force tf_forced_holiday to change. NOTE: SETTING THIS TO 1 BREAKS ZOMBIE COSTUMES", FCVAR_NONE, true, 0.0, true, 1.0);
@@ -240,6 +242,22 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 					return Plugin_Changed;
 				}
 				else if (winter == 1)
+				{
+					result = true;
+					return Plugin_Changed;
+				}
+			}
+			
+			case TFHoliday_EndOfTheLine:
+			{
+				new endoftheline = GetConVarInt(g_Cvar_EndOfTheLine);
+				
+				if (endoftheline == -1)
+				{
+					result = false;
+					return Plugin_Changed;
+				}
+				else if (endoftheline == 1)
 				{
 					result = true;
 					return Plugin_Changed;

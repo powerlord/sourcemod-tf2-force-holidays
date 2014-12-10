@@ -29,10 +29,10 @@
  * exceptions, found in LICENSE.txt (as of this writing, version JULY-31-2007),
  * or <http://www.sourcemod.net/license.php>.
  *
- * Version: 1.10.1
+ * Version: 1.10.2
  */
 
-#define VERSION "1.10.1"
+#define VERSION "1.10.2"
 
 #include <sourcemod>
 #include <tf2>
@@ -201,148 +201,146 @@ public Action:TF2_OnIsHolidayActive(TFHoliday:holiday, &bool:result)
 {
 	if (GetConVarBool(g_Cvar_Enabled))
 	{
-		switch(holiday)
+		// Change from switch to if as per PR #217: https://github.com/alliedmodders/sourcemod/pull/217
+		if (holiday == TFHoliday_Birthday)
 		{
-			case TFHoliday_Birthday:
+			new birthday = GetConVarInt(g_Cvar_Birthday);
+			if (birthday == -1)
 			{
-				new birthday = GetConVarInt(g_Cvar_Birthday);
-				if (birthday == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (birthday == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = false;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_Halloween:
+			else if (birthday == 1)
 			{
-				new halloween = GetConVarInt(g_Cvar_Halloween);
-				if (halloween == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (halloween == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = true;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_Christmas:
+		}
+		else 
+		if (holiday == TFHoliday_Halloween)
+		{
+			new halloween = GetConVarInt(g_Cvar_Halloween);
+			if (halloween == -1)
 			{
-				new winter = GetConVarInt(g_Cvar_Winter);
-				if (winter == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (winter == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = false;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_EndOfTheLine:
+			else if (halloween == 1)
 			{
-				new endoftheline = GetConVarInt(g_Cvar_EndOfTheLine);
-				
-				if (endoftheline == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (endoftheline == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = true;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_ValentinesDay:
+		}
+		else 
+		if (holiday == TFHoliday_Christmas)
+		{
+			new winter = GetConVarInt(g_Cvar_Winter);
+			if (winter == -1)
 			{
-				new valentines = GetConVarInt(g_Cvar_Valentines);
-				if (valentines == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (valentines == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = false;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_FullMoon:
+			else if (winter == 1)
 			{
-				new fullmoon = GetConVarInt(g_Cvar_FullMoon);
-				
-				if (fullmoon == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (fullmoon == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = true;
+				return Plugin_Changed;
 			}
+		}
+		else 
+		if (holiday == TFHoliday_EndOfTheLine)
+		{
+			new endoftheline = GetConVarInt(g_Cvar_EndOfTheLine);
 			
-			case TFHoliday_HalloweenOrFullMoon:
+			if (endoftheline == -1)
 			{
-				new halloween = GetConVarInt(g_Cvar_Halloween);
-				new fullmoon = GetConVarInt(g_Cvar_FullMoon);
+				result = false;
+				return Plugin_Changed;
+			}
+			else if (endoftheline == 1)
+			{
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+		else 
+		if (holiday == TFHoliday_ValentinesDay)
+		{
+			new valentines = GetConVarInt(g_Cvar_Valentines);
+			if (valentines == -1)
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else if (valentines == 1)
+			{
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+		else 
+		if (holiday == TFHoliday_FullMoon)
+		{
+			new fullmoon = GetConVarInt(g_Cvar_FullMoon);
+			
+			if (fullmoon == -1)
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else if (fullmoon == 1)
+			{
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+		else 
+		if (holiday == TFHoliday_HalloweenOrFullMoon)
+		{
+			new halloween = GetConVarInt(g_Cvar_Halloween);
+			new fullmoon = GetConVarInt(g_Cvar_FullMoon);
 
-				if (halloween == -1 && fullmoon == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (halloween == 1 || fullmoon == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
-			}
-
-			case TFHoliday_HalloweenOrFullMoonOrValentines:
+			if (halloween == -1 && fullmoon == -1)
 			{
-				new halloween = GetConVarInt(g_Cvar_Halloween);
-				new fullmoon = GetConVarInt(g_Cvar_FullMoon);
-				new valentines = GetConVarInt(g_Cvar_Valentines);
-
-				if (halloween == -1 && fullmoon == -1 && valentines == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (halloween == 1 || fullmoon == 1 || valentines == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = false;
+				return Plugin_Changed;
 			}
-			
-			case TFHoliday_AprilFools:
+			else if (halloween == 1 || fullmoon == 1)
 			{
-				new aprilfools = GetConVarInt(g_Cvar_AprilFools);
-				if (aprilfools == -1)
-				{
-					result = false;
-					return Plugin_Changed;
-				}
-				else if (aprilfools == 1)
-				{
-					result = true;
-					return Plugin_Changed;
-				}
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+		else 
+		if (holiday == TFHoliday_HalloweenOrFullMoonOrValentines)
+		{
+			new halloween = GetConVarInt(g_Cvar_Halloween);
+			new fullmoon = GetConVarInt(g_Cvar_FullMoon);
+			new valentines = GetConVarInt(g_Cvar_Valentines);
+
+			if (halloween == -1 && fullmoon == -1 && valentines == -1)
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else if (halloween == 1 || fullmoon == 1 || valentines == 1)
+			{
+				result = true;
+				return Plugin_Changed;
+			}
+		}
+		else 
+		if (holiday == TFHoliday_AprilFools)
+		{
+			new aprilfools = GetConVarInt(g_Cvar_AprilFools);
+			if (aprilfools == -1)
+			{
+				result = false;
+				return Plugin_Changed;
+			}
+			else if (aprilfools == 1)
+			{
+				result = true;
+				return Plugin_Changed;
 			}
 		}
 	}
